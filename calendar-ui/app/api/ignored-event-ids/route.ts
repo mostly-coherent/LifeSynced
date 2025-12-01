@@ -1,87 +1,86 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { execSync } from 'child_process'
-import path from 'path'
+import { supabase } from '@/lib/supabase'
 
+export const dynamic = 'force-dynamic'
+
+// GET - List all ignored event IDs
 export async function GET() {
   try {
-    const parentDir = path.resolve(process.cwd(), '..')
-    const scriptPath = path.join(parentDir, 'manage_ignored_event_ids.py')
-    const command = `PYTHONPATH="${parentDir}" python3 "${scriptPath}" list`
+    const { data, error } = await supabase
+      .from('ignored_event_ids')
+      .select('*')
+      .order('ignored_at', { ascending: false })
     
-    const output = execSync(command, { 
-      encoding: 'utf-8', 
-      cwd: parentDir,
-      shell: '/bin/bash'
-    })
-    const ignored = JSON.parse(output)
+    if (error) {
+      console.error('Error fetching ignored event IDs:', error)
+      return NextResponse.json({ error: 'Failed to fetch ignored event IDs' }, { status: 500 })
+    }
     
-    return NextResponse.json(ignored)
-  } catch (error: any) {
-    console.error('Error fetching ignored event IDs:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch ignored event IDs', details: error.message },
-      { status: 500 }
-    )
+    return NextResponse.json(data || [])
+  } catch (error: unknown) {
+    console.error('Error in ignored-event-ids GET:', error)
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({ error: 'Internal server error', details: message }, { status: 500 })
   }
 }
 
+// POST - Add a new ignored event ID
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { event_id, subject, start_time, reason } = body
     
-    const parentDir = path.resolve(process.cwd(), '..')
-    const scriptPath = path.join(parentDir, 'manage_ignored_event_ids.py')
+    if (!event_id) {
+      return NextResponse.json({ error: 'event_id is required' }, { status: 400 })
+    }
     
-    // Escape quotes for shell command
-    const safeSubject = (subject || '').replace(/"/g, '\\"')
-    const command = `PYTHONPATH="${parentDir}" python3 "${scriptPath}" add "${event_id}" "${safeSubject}" "${start_time || ''}" "${reason || 'User ignored'}"`
+    const { error } = await supabase
+      .from('ignored_event_ids')
+      .upsert({
+        event_id,
+        subject: subject || '',
+        start_time: start_time || '',
+        reason: reason || 'User ignored',
+        ignored_at: new Date().toISOString()
+      })
     
-    execSync(command, { 
-      encoding: 'utf-8', 
-      cwd: parentDir,
-      shell: '/bin/bash'
-    })
+    if (error) {
+      console.error('Error adding ignored event ID:', error)
+      return NextResponse.json({ error: 'Failed to add ignored event ID' }, { status: 500 })
+    }
     
     return NextResponse.json({ success: true })
-  } catch (error: any) {
-    console.error('Error adding ignored event ID:', error)
-    return NextResponse.json(
-      { error: 'Failed to add ignored event ID', details: error.message },
-      { status: 500 }
-    )
+  } catch (error: unknown) {
+    console.error('Error in ignored-event-ids POST:', error)
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({ error: 'Internal server error', details: message }, { status: 500 })
   }
 }
 
+// DELETE - Remove an ignored event ID
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const event_id = searchParams.get('event_id')
     
     if (!event_id) {
-      return NextResponse.json(
-        { error: 'event_id is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'event_id is required' }, { status: 400 })
     }
     
-    const parentDir = path.resolve(process.cwd(), '..')
-    const scriptPath = path.join(parentDir, 'manage_ignored_event_ids.py')
-    const command = `PYTHONPATH="${parentDir}" python3 "${scriptPath}" remove "${event_id}"`
+    const { error } = await supabase
+      .from('ignored_event_ids')
+      .delete()
+      .eq('event_id', event_id)
     
-    execSync(command, { 
-      encoding: 'utf-8', 
-      cwd: parentDir,
-      shell: '/bin/bash'
-    })
+    if (error) {
+      console.error('Error removing ignored event ID:', error)
+      return NextResponse.json({ error: 'Failed to remove ignored event ID' }, { status: 500 })
+    }
     
     return NextResponse.json({ success: true })
-  } catch (error: any) {
-    console.error('Error removing ignored event ID:', error)
-    return NextResponse.json(
-      { error: 'Failed to remove ignored event ID', details: error.message },
-      { status: 500 }
-    )
+  } catch (error: unknown) {
+    console.error('Error in ignored-event-ids DELETE:', error)
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({ error: 'Internal server error', details: message }, { status: 500 })
   }
 }
-

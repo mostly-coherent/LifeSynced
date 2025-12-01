@@ -133,10 +133,19 @@ export default function Home() {
   }
   
   // Handle event hover
-  const handleEventHover = (event: CalendarEvent, e: React.MouseEvent) => {
+  const handleEventHover = (event: CalendarEvent, e: React.MouseEvent | null) => {
+    if (!e) {
+      // Toggle tooltip on click (mobile-friendly)
+      if (hoveredEvent?.id === event.id) {
+        setHoveredEvent(null)
+      } else {
+        setHoveredEvent(event)
+      }
+      return
+    }
+    
     const rect = e.currentTarget.getBoundingClientRect()
     // Position tooltip above the event, but ensure it stays within viewport
-    const viewportHeight = window.innerHeight
     const tooltipHeight = 200 // approximate tooltip height
     
     let y = rect.top - 10
@@ -1056,7 +1065,7 @@ export default function Home() {
                             )}
                           </div>
                           <button
-                            onClick={(e) => { e.stopPropagation(); ignoreEvent(event.id, event.subject); }}
+                            onClick={(e) => { e.stopPropagation(); ignoreEvent(event); }}
                             className="opacity-40 hover:opacity-100 text-gray-500 p-1 flex-shrink-0"
                             title="Ignore this event"
                           >
