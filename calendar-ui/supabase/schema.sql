@@ -53,11 +53,16 @@ CREATE INDEX IF NOT EXISTS idx_appointments_end_time ON appointments(end_time);
 CREATE INDEX IF NOT EXISTS idx_appointments_source ON appointments(source);
 CREATE INDEX IF NOT EXISTS idx_appointments_subject_source ON appointments(subject, source, start_time);
 
--- Row Level Security (RLS) - Enable for production
--- For now, we'll use service role key which bypasses RLS
--- ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE ignored_base_ids ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE ignored_event_ids ENABLE ROW LEVEL SECURITY;
+-- Row Level Security (RLS) - Enabled for security
+-- Service role key bypasses RLS, so your app still works
+-- But anon key users (public) cannot access any data
+ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ignored_base_ids ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ignored_event_ids ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sync_metadata ENABLE ROW LEVEL SECURITY;
+
+-- No policies defined = no public access allowed
+-- Only service_role key can read/write (which your app uses)
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at()
