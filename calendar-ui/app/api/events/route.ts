@@ -15,8 +15,6 @@ export async function GET(request: NextRequest) {
     endDate.setUTCDate(endDate.getUTCDate() + daysAhead)
     endDate.setUTCHours(23, 59, 59, 999)
     
-    console.log('Query range:', startDate.toISOString(), 'to', endDate.toISOString())
-    
     // Fetch appointments within date range
     const { data: appointments, error: aptError } = await supabase
       .from('appointments')

@@ -724,12 +724,28 @@ export default function Home() {
             const gridEndHour = 24
             const gridHeight = gridEndHour - gridStartHour
             
+            // Helper to get hours in the selected timezone
+            const getHoursInTimezone = (dateStr: string) => {
+              const date = new Date(dateStr)
+              // Use Intl.DateTimeFormat to get hours in the selected timezone
+              const formatter = new Intl.DateTimeFormat('en-US', {
+                hour: 'numeric',
+                minute: 'numeric',
+                hour12: false,
+                timeZone: timezone
+              })
+              const parts = formatter.formatToParts(date)
+              const hourPart = parts.find(p => p.type === 'hour')
+              const minutePart = parts.find(p => p.type === 'minute')
+              const hours = parseInt(hourPart?.value || '0', 10)
+              const minutes = parseInt(minutePart?.value || '0', 10)
+              return hours + minutes / 60
+            }
+            
             // Convert events to time slots
             const slots = events.map(event => {
-              const start = new Date(event.start_time)
-              const end = new Date(event.end_time)
-              const startHour = start.getHours() + start.getMinutes() / 60
-              const endHour = end.getHours() + end.getMinutes() / 60
+              const startHour = getHoursInTimezone(event.start_time)
+              const endHour = getHoursInTimezone(event.end_time)
               return {
                 event,
                 startHour: Math.max(gridStartHour, Math.min(gridEndHour, startHour)),

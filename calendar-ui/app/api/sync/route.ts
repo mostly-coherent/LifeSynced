@@ -98,9 +98,20 @@ async function syncIcsCalendar(url: string, source: 'ics' | 'apple_calendar'): P
     
     const eventsToUpsert: Partial<Appointment>[] = []
     
+    let recurringCount = 0
+    let singleCount = 0
+    
     for (const vevent of vevents) {
       try {
         const event = new ICAL.Event(vevent)
+        
+        // Debug: check if events are being detected as recurring
+        if (event.isRecurring()) {
+          recurringCount++
+        } else {
+          singleCount++
+        }
+        
         const events = expandEvent(event, rangeStart, rangeEnd, source)
         eventsToUpsert.push(...events)
       } catch (err) {
@@ -108,6 +119,8 @@ async function syncIcsCalendar(url: string, source: 'ics' | 'apple_calendar'): P
         result.errors.push(`Failed to parse event: ${msg}`)
       }
     }
+    
+    console.log(`[${source}] Found ${recurringCount} recurring events, ${singleCount} single events`)
     
     // Batch upsert events - deduplicate by ID first
     if (eventsToUpsert.length > 0) {
@@ -166,17 +179,24 @@ function expandEvent(
   }
   
   // Check if event is recurring
-  if (event.isRecurring()) {
+  const isRecurring = event.isRecurring()
+  
+  if (isRecurring) {
     try {
       const iterator = event.iterator()
       let next = iterator.next()
       let count = 0
-      const maxOccurrences = 100 // Limit to prevent infinite loops
+      // Calculate max iterations needed: worst case is daily events for 2+ years
+      // rangeEnd is 90 days ahead, but events might start years ago
+      // 500 should cover most cases (1+ year of daily events)
+      const maxIterations = 500
       
-      while (next && count < maxOccurrences) {
+      while (next && count < maxIterations) {
         const occurrenceDate = next.toJSDate()
         
+        // Skip past occurrences until we reach our range, but keep iterating
         if (occurrenceDate > rangeEnd) break
+        
         if (occurrenceDate >= rangeStart) {
           const occurrence = createEventRecord(event, occurrenceDate, source)
           if (occurrence) results.push(occurrence)
@@ -185,8 +205,9 @@ function expandEvent(
         next = iterator.next()
         count++
       }
-    } catch {
-      // Fallback to single event if recurrence expansion fails
+    } catch (recurErr) {
+      // Log the error and fallback to single event
+      console.error(`Failed to expand recurring event "${subject}":`, recurErr)
       const occurrence = createEventRecord(event, event.startDate?.toJSDate(), source)
       if (occurrence) results.push(occurrence)
     }
