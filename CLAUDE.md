@@ -3,6 +3,8 @@
 ## Project Type
 Full-stack Next.js application with Supabase (PostgreSQL) backend, deployable to Vercel.
 
+*Follows root CLAUDE.md Core Web defaults. No AI/LLM features currently.*
+
 ## Key Commands
 
 ### Development
