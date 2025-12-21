@@ -2,6 +2,8 @@
 
 Next.js web interface for viewing synced calendar events.
 
+![Calendar View](e2e-results/01-calendar.png)
+
 ## Quick Start
 
 ```bash
