@@ -151,8 +151,9 @@ LifeSynced is a personal/family productivity tool that unifies work (Outlook) an
 
 ---
 
-## Recently Implemented
+## Implementation Status
 
+### Phase 1: Core Calendar View ✅ COMPLETE
 - ✅ Cloud migration from SQLite to Supabase
 - ✅ TypeScript sync logic (no Python dependency for cloud)
 - ✅ Vercel deployment with cron jobs
@@ -167,20 +168,111 @@ LifeSynced is a personal/family productivity tool that unifies work (Outlook) an
 
 ---
 
-## Future Considerations
+## Next Development Phases
 
-### Potential Enhancements
+### Phase 2: AI Agent for Life Event Planning (Next - Priority)
+**Goal:** Proactive AI agent that reminds and helps plan important life events
 
-- User authentication (Supabase Auth) for multi-user support
-- Google Calendar integration
-- Push notifications for conflicts
-- PWA for mobile home screen
-- Calendar export functionality
-- Event search/filter
-- Dark mode
+**The Challenge:** Agentic commerce in practice—juggling multiple calendars while ensuring nothing important falls through the cracks. The agent needs to understand event importance, detect upcoming milestones, and proactively suggest preparation steps.
 
-### Scalability
+**Tasks:**
+- [ ] Define "important life events" taxonomy (birthdays, anniversaries, school events, appointments)
+- [ ] Build event importance classifier (routine vs. significant)
+- [ ] Implement proactive reminder system (not just notifications, but prep suggestions)
+- [ ] "What do I need to prepare?" agent that generates task lists
+- [ ] Gift/card suggestions for special occasions (integrate with preferences)
+- [ ] Travel time calculation and departure reminders
+- [ ] Conflict avoidance: "You have 3 events same week as anniversary"
+- [ ] Natural language queries: "What's happening this month that I should prepare for?"
+- [ ] Test with real family calendar scenarios
 
-- Current design optimized for single user/family
-- Supabase free tier sufficient for personal use
-- Can upgrade Supabase plan for higher usage
+**Success Criteria:**
+- Agent identifies important events 2+ weeks in advance
+- Prep suggestions are actionable and personalized
+- Nothing important slips through the cracks
+- Family feels less stressed about event coordination
+
+### Phase 3: User Authentication & Multi-User (Week 3-4)
+**Goal:** Enable family members to access with their own accounts
+
+**Tasks:**
+- [ ] Implement Supabase Auth (email/password)
+- [ ] Add user profiles and preferences
+- [ ] Calendar sharing within family
+- [ ] Per-user timezone settings
+- [ ] Per-user ignore lists
+- [ ] Invitation system for family members
+
+**Success Criteria:**
+- Multiple family members can log in
+- Each user has personalized view
+- Sharing controls for privacy
+- Seamless authentication flow
+
+### Phase 3: Google Calendar Integration (Week 3-4)
+**Goal:** Add Google Calendar as third calendar source
+
+**Tasks:**
+- [ ] Google Calendar API integration
+- [ ] OAuth flow for Google authentication
+- [ ] Sync Google events to Supabase
+- [ ] Three-way conflict detection (Outlook + iCloud + Google)
+- [ ] Per-calendar color coding
+- [ ] Selective calendar sync (choose which Google cals)
+
+**Success Criteria:**
+- Google events appear alongside Outlook/iCloud
+- Three-way conflict detection works
+- No duplicate events
+- Syncs multiple Google calendars
+
+### Phase 4: Enhanced Conflict Resolution (Week 5-6)
+**Goal:** Smarter conflict detection and resolution suggestions
+
+**Tasks:**
+- [ ] Conflict severity scoring (minor overlap vs. full conflict)
+- [ ] Conflict resolution suggestions ("Move this 30 min later?")
+- [ ] Buffer time consideration (travel time between events)
+- [ ] Conflict notification system (email/push)
+- [ ] Weekly conflict report
+- [ ] Auto-ignore low-priority conflicts
+
+**Success Criteria:**
+- Conflicts prioritized by severity
+- Actionable resolution suggestions
+- Proactive notifications for upcoming conflicts
+- Weekly digest of resolved/pending conflicts
+
+### Phase 5: Advanced Features (Week 7-8)
+**Goal:** PWA, search, and quality-of-life improvements
+
+**Tasks:**
+- [ ] Progressive Web App (PWA) manifest
+- [ ] Install to home screen support
+- [ ] Event search and filter
+- [ ] Calendar export (ICS download)
+- [ ] Dark mode toggle
+- [ ] Keyboard shortcuts
+- [ ] Offline mode with service worker
+
+**Success Criteria:**
+- Installable on mobile/desktop
+- Fast event search
+- Accessible offline
+- Dark mode for low-light viewing
+
+### Phase 6: Smart Scheduling Assistant (Future)
+**Goal:** AI-powered scheduling recommendations
+
+**Tasks:**
+- [ ] Analyze historical patterns
+- [ ] Suggest best meeting times
+- [ ] Identify over-scheduled days
+- [ ] Recommend focus time blocks
+- [ ] Meeting fatigue detection
+- [ ] Integration with OpenAI for smart suggestions
+
+**Success Criteria:**
+- Personalized scheduling insights
+- Proactive focus time recommendations
+- Meeting overload warnings

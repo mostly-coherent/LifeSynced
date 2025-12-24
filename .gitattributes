@@ -1,0 +1,10 @@
+# GitHub Linguist configuration
+# Force Python detection (primary language for this project)
+
+*.py linguist-language=Python
+*.ts linguist-language=TypeScript
+*.tsx linguist-language=TypeScript
+
+# Mark documentation as documentation (excluded from language stats)
+*.md linguist-documentation=true
+
