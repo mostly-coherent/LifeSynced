@@ -66,12 +66,16 @@ ALTER TABLE sync_metadata ENABLE ROW LEVEL SECURITY;
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Triggers for updated_at
 DROP TRIGGER IF EXISTS appointments_updated_at ON appointments;
