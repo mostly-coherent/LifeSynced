@@ -22,8 +22,5 @@ node_modules
 .vercel
 .env*.local
 
-# AI Documentation (Mode A - not published to GitHub)
-PLAN.md
-BUILD_LOG.md
-PIVOTS.md
-CLAUDE.md
+# AI Documentation (Mode A - canonical docs are now published to GitHub)
+# Canonical docs (README.md, CLAUDE.md, Plan.md, BUILD_LOG.md, PIVOTS.md) are tracked
