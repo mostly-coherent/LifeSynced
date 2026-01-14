@@ -25,5 +25,11 @@ node_modules
 # macOS Launch Agent (contains local paths)
 com.lifesynced.calendar.plist
 
+# Testing (screenshots may contain personal paths or local content)
+calendar-ui/test-results/
+calendar-ui/e2e-results/
+calendar-ui/playwright-report/
+calendar-ui/playwright/.cache/
+
 # AI Documentation (Mode A - canonical docs are now published to GitHub)
 # Canonical docs (README.md, CLAUDE.md, Plan.md, BUILD_LOG.md, PIVOTS.md) are tracked
