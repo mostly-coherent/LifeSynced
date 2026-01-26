@@ -10,7 +10,15 @@ export const fetchCache = 'force-no-store'
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const daysAhead = parseInt(searchParams.get('days') || '30', 10)
+    const daysParam = searchParams.get('days') || '30'
+    const daysAhead = parseInt(daysParam, 10)
+    
+    // Validate daysAhead parameter
+    if (isNaN(daysAhead) || daysAhead < 1 || daysAhead > 365) {
+      return NextResponse.json({ 
+        error: 'Invalid days parameter. Must be between 1 and 365.' 
+      }, { status: 400 })
+    }
     
     // Check if personal events should be revealed
     // Default: always masked. Only revealed with correct password.
@@ -57,8 +65,24 @@ export async function GET(request: NextRequest) {
     }
     
     // Create sets for efficient lookup
-    const ignoredBaseSet = new Set((ignoredBaseIds || []).map((i: { base_id: string }) => i.base_id))
-    const ignoredEventSet = new Set((ignoredEventIds || []).map((i: { event_id: string }) => i.event_id))
+    const ignoredBaseSet = new Set<string>()
+    const ignoredEventSet = new Set<string>()
+    
+    if (ignoredBaseIds && Array.isArray(ignoredBaseIds)) {
+      for (const item of ignoredBaseIds) {
+        if (item && typeof item === 'object' && 'base_id' in item && typeof item.base_id === 'string') {
+          ignoredBaseSet.add(item.base_id)
+        }
+      }
+    }
+    
+    if (ignoredEventIds && Array.isArray(ignoredEventIds)) {
+      for (const item of ignoredEventIds) {
+        if (item && typeof item === 'object' && 'event_id' in item && typeof item.event_id === 'string') {
+          ignoredEventSet.add(item.event_id)
+        }
+      }
+    }
     
     // Filter out ignored events and convert to frontend format
     const events = (appointments || [])
@@ -74,6 +98,7 @@ export async function GET(request: NextRequest) {
       })
       .map(apt => {
         const event = toCalendarEvent(apt)
+        if (!event) return null // Skip invalid events
         
         // Mask personal calendar event names if not revealed
         if (apt.source === 'apple_calendar' && !personalRevealed) {
@@ -84,6 +109,7 @@ export async function GET(request: NextRequest) {
         
         return event
       })
+      .filter((event): event is NonNullable<typeof event> => event !== null) // Remove null values
     
     // Return with no-cache headers to prevent any caching
     const response = NextResponse.json(events)

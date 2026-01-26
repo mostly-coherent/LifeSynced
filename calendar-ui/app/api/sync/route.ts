@@ -54,7 +54,7 @@ export async function POST() {
     }
     
     // Update sync metadata
-    await supabase
+    const { error: metadataError } = await supabase
       .from('sync_metadata')
       .upsert({
         id: 'default',
@@ -62,6 +62,11 @@ export async function POST() {
         last_apple_sync: appleUrls.length > 0 ? new Date().toISOString() : null,
         updated_at: new Date().toISOString()
       })
+    
+    if (metadataError) {
+      console.error('Error updating sync metadata:', metadataError)
+      // Don't fail the entire sync if metadata update fails
+    }
     
     const totalAdded = results.reduce((sum, r) => sum + r.added, 0)
     const totalUpdated = results.reduce((sum, r) => sum + r.updated, 0)
@@ -89,18 +94,35 @@ async function syncIcsCalendar(url: string, source: 'ics' | 'apple_calendar'): P
   const result: SyncResult = { source, added: 0, updated: 0, errors: [] }
   
   try {
+    // Validate URL format
+    if (!url || typeof url !== 'string' || !url.startsWith('http')) {
+      throw new Error(`Invalid ICS URL format: ${url}`)
+    }
+    
     // Fetch ICS data
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'LifeSynced Calendar Sync/1.0'
-      }
-    })
+    let response: Response
+    try {
+      response = await fetch(url, {
+        headers: {
+          'User-Agent': 'LifeSynced Calendar Sync/1.0'
+        }
+      })
+    } catch (fetchError) {
+      const msg = fetchError instanceof Error ? fetchError.message : 'Unknown network error'
+      throw new Error(`Network error fetching ICS: ${msg}`)
+    }
     
     if (!response.ok) {
       throw new Error(`Failed to fetch ICS: ${response.status} ${response.statusText}`)
     }
     
-    const icsData = await response.text()
+    let icsData: string
+    try {
+      icsData = await response.text()
+    } catch (textError) {
+      const msg = textError instanceof Error ? textError.message : 'Unknown error'
+      throw new Error(`Failed to read ICS data: ${msg}`)
+    }
     
     // Parse ICS using ical.js
     const jcalData = ICAL.parse(icsData)
@@ -252,7 +274,12 @@ function createEventRecord(
   
   let endDate: Date
   if (duration) {
-    endDate = new Date(startDate.getTime() + duration.toSeconds() * 1000)
+    try {
+      endDate = new Date(startDate.getTime() + duration.toSeconds() * 1000)
+    } catch (durationError) {
+      // Fallback to default if duration calculation fails
+      endDate = new Date(startDate.getTime() + 60 * 60 * 1000) // Default 1 hour
+    }
   } else if (event.endDate) {
     // For recurring events, calculate end based on original duration
     const originalStart = event.startDate?.toJSDate()

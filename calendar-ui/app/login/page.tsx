@@ -1,13 +1,15 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectPath = searchParams.get('redirect') || '/'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -22,13 +24,16 @@ export default function LoginPage() {
       })
 
       if (response.ok) {
-        router.push('/')
+        // Redirect to original path or home
+        router.push(redirectPath)
         router.refresh()
       } else {
-        setError('Incorrect password')
+        const errorData = await response.json().catch(() => ({}))
+        setError(errorData.error || 'Incorrect password')
       }
-    } catch {
-      setError('Something went wrong')
+    } catch (error) {
+      console.error('Login error:', error)
+      setError('Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }

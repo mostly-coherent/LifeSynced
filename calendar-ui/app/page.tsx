@@ -96,6 +96,16 @@ export default function Home() {
     return tz ? tz.short : 'PT'
   }
 
+  // Track if component is mounted to prevent state updates after unmount
+  const isMountedRef = useRef(true)
+  
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+  
   useEffect(() => {
     // Set default view mode based on screen size (mobile = Day, desktop = Week)
     setViewMode(getDefaultViewMode())
@@ -109,21 +119,32 @@ export default function Home() {
     if (savedTimezone) {
       setTimezone(savedTimezone)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   
-  const checkPersonalRevealStatus = async () => {
+  const checkPersonalRevealStatus = useCallback(async () => {
     try {
       const response = await fetch('/api/personal-reveal', { cache: 'no-store' })
+      if (!response.ok) {
+        throw new Error(`Failed to check personal reveal status: ${response.status}`)
+      }
       const data = await response.json()
-      setPersonalRevealed(data.revealed || false)
-      setCanRevealPersonal(data.canReveal !== false) // Default to true if not specified
+      if (isMountedRef.current) {
+        setPersonalRevealed(data.revealed || false)
+        setCanRevealPersonal(data.canReveal !== false) // Default to true if not specified
+      }
     } catch (error) {
       console.error('Error checking personal reveal status:', error)
+      if (isMountedRef.current) {
+        setCanRevealPersonal(false)
+      }
     }
-  }
+  }, [])
   
   const handleRevealSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!isMountedRef.current) return
+    
     setRevealLoading(true)
     setRevealError('')
     
@@ -133,6 +154,8 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: revealPassword })
       })
+      
+      if (!isMountedRef.current) return
       
       if (response.ok) {
         setPersonalRevealed(true)
@@ -146,12 +169,17 @@ export default function Home() {
         // Refresh events to get unmasked data
         await fetchEvents()
       } else {
-        setRevealError('Incorrect password')
+        const errorData = await response.json().catch(() => ({}))
+        setRevealError(errorData.error || 'Incorrect password')
       }
-    } catch {
-      setRevealError('Something went wrong')
+    } catch (error) {
+      if (!isMountedRef.current) return
+      console.error('Error in handleRevealSubmit:', error)
+      setRevealError('Something went wrong. Please try again.')
     } finally {
-      setRevealLoading(false)
+      if (isMountedRef.current) {
+        setRevealLoading(false)
+      }
     }
   }
   
@@ -167,15 +195,22 @@ export default function Home() {
   }, [personalRevealed])
   
   const handleHidePersonal = async () => {
+    if (!isMountedRef.current) return
+    
     try {
-      await fetch('/api/personal-reveal', { method: 'DELETE' })
-      setPersonalRevealed(false)
-      // If currently on 4-week view, switch back to week view (since 4-week is gated)
-      if (viewMode === '4week') {
-        setViewMode('week')
+      const response = await fetch('/api/personal-reveal', { method: 'DELETE' })
+      if (!response.ok) {
+        throw new Error(`Failed to hide personal events: ${response.status}`)
       }
-      // Refresh events to get masked data
-      await fetchEvents()
+      if (isMountedRef.current) {
+        setPersonalRevealed(false)
+        // If currently on 4-week view, switch back to week view (since 4-week is gated)
+        if (viewMode === '4week') {
+          setViewMode('week')
+        }
+        // Refresh events to get masked data
+        await fetchEvents()
+      }
     } catch (error) {
       console.error('Error hiding personal events:', error)
     }
@@ -296,54 +331,119 @@ export default function Home() {
     setHoveredEvent(event)
   }
 
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     try {
-      setLoading(true)
+      if (isMountedRef.current) {
+        setLoading(true)
+      }
       const response = await fetch('/api/events?daysAhead=30', { cache: 'no-store' })
-      if (!response.ok) throw new Error('Failed to fetch events')
+      if (!response.ok) {
+        throw new Error(`Failed to fetch events: ${response.status} ${response.statusText}`)
+      }
       const data = await response.json()
-      setEvents(data)
+      if (isMountedRef.current) {
+        setEvents(Array.isArray(data) ? data : [])
+      }
     } catch (error) {
       console.error('Error fetching events:', error)
+      if (isMountedRef.current) {
+        setEvents([])
+      }
     } finally {
-      setLoading(false)
+      if (isMountedRef.current) {
+        setLoading(false)
+      }
     }
-  }
+  }, [])
 
-  const fetchIgnoredBaseIds = async () => {
+  const fetchIgnoredBaseIds = useCallback(async () => {
     try {
       const response = await fetch('/api/ignored-base-ids', { cache: 'no-store' })
-      if (!response.ok) throw new Error('Failed to fetch ignored base IDs')
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ignored base IDs: ${response.status} ${response.statusText}`)
+      }
       const data = await response.json()
-      setIgnoredBaseIds(new Set(data.map((item: any) => item.base_id)))
-      setIgnoredSeriesList(data)
+      if (Array.isArray(data) && isMountedRef.current) {
+        const baseIds = new Set<string>()
+        const seriesList: Array<{base_id: string, subject: string}> = []
+        for (const item of data) {
+          if (item && typeof item === 'object' && 'base_id' in item && typeof item.base_id === 'string') {
+            baseIds.add(item.base_id)
+            seriesList.push({
+              base_id: item.base_id,
+              subject: typeof item.subject === 'string' ? item.subject : ''
+            })
+          }
+        }
+        setIgnoredBaseIds(baseIds)
+        setIgnoredSeriesList(seriesList)
+      }
     } catch (error) {
       console.error('Error fetching ignored base IDs:', error)
+      if (isMountedRef.current) {
+        setIgnoredBaseIds(new Set())
+        setIgnoredSeriesList([])
+      }
     }
-  }
+  }, [])
 
-  const fetchIgnoredEventIds = async () => {
+  const fetchIgnoredEventIds = useCallback(async () => {
     try {
       const response = await fetch('/api/ignored-event-ids', { cache: 'no-store' })
-      if (!response.ok) throw new Error('Failed to fetch ignored event IDs')
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ignored event IDs: ${response.status} ${response.statusText}`)
+      }
       const data = await response.json()
-      setIgnoredEventIds(new Set(data.map((item: any) => item.event_id)))
-      setIgnoredOccurrencesList(data)
+      if (Array.isArray(data) && isMountedRef.current) {
+        const eventIds = new Set<string>()
+        const occurrencesList: Array<{event_id: string, subject: string, start_time: string}> = []
+        for (const item of data) {
+          if (item && typeof item === 'object' && 'event_id' in item && typeof item.event_id === 'string') {
+            eventIds.add(item.event_id)
+            occurrencesList.push({
+              event_id: item.event_id,
+              subject: typeof item.subject === 'string' ? item.subject : '',
+              start_time: typeof item.start_time === 'string' ? item.start_time : ''
+            })
+          }
+        }
+        setIgnoredEventIds(eventIds)
+        setIgnoredOccurrencesList(occurrencesList)
+      }
     } catch (error) {
       console.error('Error fetching ignored event IDs:', error)
+      if (isMountedRef.current) {
+        setIgnoredEventIds(new Set())
+        setIgnoredOccurrencesList([])
+      }
     }
-  }
+  }, [])
 
   const handleRefresh = async () => {
+    if (!isMountedRef.current) return
+    
     try {
       setSyncStatus('Syncing calendars...')
       const response = await fetch('/api/sync', { method: 'POST' })
-      if (!response.ok) throw new Error('Sync failed')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Sync failed: ${response.status}`)
+      }
       await fetchEvents()
-      setSyncStatus('Sync completed')
-      setTimeout(() => setSyncStatus(''), 3000)
+      if (isMountedRef.current) {
+        setSyncStatus('Sync completed')
+        const timeoutId = setTimeout(() => {
+          if (isMountedRef.current) {
+            setSyncStatus('')
+          }
+        }, 3000)
+        return () => clearTimeout(timeoutId)
+      }
     } catch (error) {
-      setSyncStatus(`Sync failed: ${error}`)
+      if (isMountedRef.current) {
+        const errorMessage = error instanceof Error ? error.message : 'Sync failed'
+        setSyncStatus(`Sync failed: ${errorMessage}`)
+      }
     }
   }
 
@@ -403,6 +503,8 @@ export default function Home() {
 
   // Ignore a specific occurrence only
   const ignoreOccurrence = async (event: CalendarEvent) => {
+    if (!isMountedRef.current) return
+    
     try {
       const response = await fetch('/api/ignored-event-ids', {
         method: 'POST',
@@ -413,17 +515,25 @@ export default function Home() {
           start_time: event.start_time
         })
       })
-      if (!response.ok) throw new Error('Failed to ignore occurrence')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to ignore occurrence: ${response.status}`)
+      }
       await fetchIgnoredEventIds()
       await fetchEvents()
     } catch (error) {
       console.error('Error ignoring occurrence:', error)
+    } finally {
+      if (isMountedRef.current) {
+        setIgnoreModalEvent(null)
+      }
     }
-    setIgnoreModalEvent(null)
   }
 
   // Ignore the entire series
   const ignoreSeries = async (event: CalendarEvent) => {
+    if (!isMountedRef.current) return
+    
     const baseId = getBaseIdFromEventId(event.id)
     try {
       const response = await fetch('/api/ignored-base-ids', {
@@ -431,13 +541,19 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ base_id: baseId, subject: event.subject })
       })
-      if (!response.ok) throw new Error('Failed to ignore series')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to ignore series: ${response.status}`)
+      }
       await fetchIgnoredBaseIds()
       await fetchEvents()
     } catch (error) {
       console.error('Error ignoring series:', error)
+    } finally {
+      if (isMountedRef.current) {
+        setIgnoreModalEvent(null)
+      }
     }
-    setIgnoreModalEvent(null)
   }
 
   // Handle ignore button click - show modal for recurring, direct ignore for non-recurring
@@ -450,11 +566,16 @@ export default function Home() {
   }
 
   const unignoreBaseId = async (baseId: string) => {
+    if (!isMountedRef.current) return
+    
     try {
       const response = await fetch('/api/ignored-base-ids?base_id=' + encodeURIComponent(baseId), {
         method: 'DELETE'
       })
-      if (!response.ok) throw new Error('Failed to unignore series')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to unignore series: ${response.status}`)
+      }
       await fetchIgnoredBaseIds()
       await fetchEvents()
     } catch (error) {
@@ -463,11 +584,16 @@ export default function Home() {
   }
 
   const unignoreEventId = async (eventId: string) => {
+    if (!isMountedRef.current) return
+    
     try {
       const response = await fetch('/api/ignored-event-ids?event_id=' + encodeURIComponent(eventId), {
         method: 'DELETE'
       })
-      if (!response.ok) throw new Error('Failed to unignore occurrence')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to unignore occurrence: ${response.status}`)
+      }
       await fetchIgnoredEventIds()
       await fetchEvents()
     } catch (error) {
@@ -477,20 +603,39 @@ export default function Home() {
 
   const eventsByDate = useMemo(() => {
     const grouped: Record<string, CalendarEvent[]> = {}
+    if (!Array.isArray(events)) return grouped
+    
     events.forEach(event => {
+      if (!event || !event.id || !event.start_time) return
+      
       const baseId = getBaseIdFromEventId(event.id)
       if (ignoredBaseIds.has(baseId)) return
       
       // Use the selected timezone for date grouping
-      const date = new Date(event.start_time)
-      const dateStr = date.toLocaleDateString('en-CA', { timeZone: timezone }) // en-CA gives YYYY-MM-DD format
-      
-      if (!grouped[dateStr]) grouped[dateStr] = []
-      grouped[dateStr].push(event)
+      try {
+        const date = new Date(event.start_time)
+        if (isNaN(date.getTime())) return // Invalid date
+        
+        const dateStr = date.toLocaleDateString('en-CA', { timeZone: timezone }) // en-CA gives YYYY-MM-DD format
+        if (!dateStr) return
+        
+        if (!grouped[dateStr]) grouped[dateStr] = []
+        grouped[dateStr].push(event)
+      } catch (error) {
+        console.error('Error processing event date:', error, event)
+      }
     })
     
     Object.keys(grouped).forEach(key => {
-      grouped[key].sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+      grouped[key].sort((a, b) => {
+        try {
+          const timeA = new Date(a.start_time).getTime()
+          const timeB = new Date(b.start_time).getTime()
+          return timeA - timeB
+        } catch {
+          return 0
+        }
+      })
     })
     
     return grouped
@@ -498,9 +643,11 @@ export default function Home() {
 
   const getOverlappingEventIds = useMemo(() => {
     if (!detectOverlap) return new Set<string>()
+    if (!Array.isArray(events)) return new Set<string>()
     
     // Helper to check if an event is ignored
     const isEventIgnored = (event: CalendarEvent) => {
+      if (!event || !event.id) return true // Treat invalid events as ignored
       // Check if specific event ID is ignored
       if (ignoredEventIds.has(event.id)) return true
       // Check if base ID (entire series) is ignored
@@ -512,6 +659,7 @@ export default function Home() {
     // Helper to check if an event is all-day or multi-day [Free]
     // These should be excluded from overlap detection (for personal calendars)
     const isAllDayOrMultiDayFree = (event: CalendarEvent) => {
+      if (!event || !event.start_time || !event.end_time) return false
       // Only filter [Free] or Free events
       if (event.subject !== '[Free]' && event.subject !== 'Free') return false
       
@@ -519,20 +667,27 @@ export default function Home() {
       if (event.is_all_day) return true
       
       // Check if multi-day (24+ hours)
-      const start = new Date(event.start_time).getTime()
-      const end = new Date(event.end_time).getTime()
-      const durationHours = (end - start) / (1000 * 60 * 60)
-      return durationHours >= 24
+      try {
+        const start = new Date(event.start_time).getTime()
+        const end = new Date(event.end_time).getTime()
+        if (isNaN(start) || isNaN(end)) return false
+        const durationHours = (end - start) / (1000 * 60 * 60)
+        return durationHours >= 24
+      } catch {
+        return false
+      }
     }
     
     // Filter out ignored events and all-day/multi-day [Free] from overlap detection
     // Note: Overlap detection is ONLY between Personal and Work calendars (not within same type)
     const personalEvents = events.filter(e => 
+      e && e.id && e.start_time && e.end_time &&
       e.source === 'apple_calendar' && 
       !isEventIgnored(e) && 
       !isAllDayOrMultiDayFree(e)
     )
     const workEvents = events.filter(e => 
+      e && e.id && e.start_time && e.end_time &&
       (e.source === 'graph_api' || e.source === 'ics') && 
       !isEventIgnored(e)
     )
@@ -542,14 +697,22 @@ export default function Home() {
     // Only detect overlap between Personal and Work events
     personalEvents.forEach(personalEvent => {
       workEvents.forEach(workEvent => {
-        const personalStart = new Date(personalEvent.start_time).getTime()
-        const personalEnd = new Date(personalEvent.end_time).getTime()
-        const workStart = new Date(workEvent.start_time).getTime()
-        const workEnd = new Date(workEvent.end_time).getTime()
-        
-        if ((personalStart < workEnd && personalEnd > workStart)) {
-          overlappingIds.add(personalEvent.id)
-          overlappingIds.add(workEvent.id)
+        try {
+          const personalStart = new Date(personalEvent.start_time).getTime()
+          const personalEnd = new Date(personalEvent.end_time).getTime()
+          const workStart = new Date(workEvent.start_time).getTime()
+          const workEnd = new Date(workEvent.end_time).getTime()
+          
+          if (isNaN(personalStart) || isNaN(personalEnd) || isNaN(workStart) || isNaN(workEnd)) {
+            return // Skip invalid dates
+          }
+          
+          if ((personalStart < workEnd && personalEnd > workStart)) {
+            overlappingIds.add(personalEvent.id)
+            overlappingIds.add(workEvent.id)
+          }
+        } catch (error) {
+          console.error('Error calculating overlap:', error, personalEvent, workEvent)
         }
       })
     })

@@ -11,10 +11,21 @@ export const supabase = new Proxy({} as SupabaseClient, {
   get(_, prop) {
     if (!_supabase) {
       if (!supabaseUrl || !supabaseServiceKey) {
-        throw new Error('Supabase environment variables not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.')
+        throw new Error(
+          'Supabase environment variables not configured. ' +
+          'Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY. ' +
+          `Current values: URL=${supabaseUrl ? 'set' : 'missing'}, Key=${supabaseServiceKey ? 'set' : 'missing'}`
+        )
       }
-      _supabase = createClient(supabaseUrl, supabaseServiceKey)
+      try {
+        _supabase = createClient(supabaseUrl, supabaseServiceKey)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error'
+        throw new Error(`Failed to create Supabase client: ${message}`)
+      }
     }
+    // Type assertion needed for Proxy pattern, but we validate _supabase is not null above
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (_supabase as any)[prop]
   }
 })
@@ -60,10 +71,44 @@ export interface SyncMetadata {
 }
 
 // Helper to convert Appointment to frontend CalendarEvent format
-export function toCalendarEvent(apt: Appointment) {
+// Returns null if appointment is invalid (caller should filter these out)
+export function toCalendarEvent(apt: Appointment | null | undefined): {
+  id: string
+  subject: string
+  start_time: string
+  end_time: string
+  location: string
+  organizer_email: string
+  organizer_name: string
+  source: 'graph_api' | 'ics' | 'apple_calendar'
+  is_all_day: number
+} | null {
+  if (!apt) {
+    console.warn('toCalendarEvent: Appointment is null or undefined')
+    return null
+  }
+  
+  // Validate required fields - return null for invalid data instead of throwing
+  if (!apt.id || typeof apt.id !== 'string') {
+    console.warn('toCalendarEvent: Invalid appointment id', apt)
+    return null
+  }
+  if (!apt.start_time || typeof apt.start_time !== 'string') {
+    console.warn('toCalendarEvent: Invalid appointment start_time', apt.id)
+    return null
+  }
+  if (!apt.end_time || typeof apt.end_time !== 'string') {
+    console.warn('toCalendarEvent: Invalid appointment end_time', apt.id)
+    return null
+  }
+  if (!apt.source || !['graph_api', 'ics', 'apple_calendar'].includes(apt.source)) {
+    console.warn('toCalendarEvent: Invalid appointment source', apt.id, apt.source)
+    return null
+  }
+  
   return {
     id: apt.id,
-    subject: apt.subject,
+    subject: apt.subject || 'No Title',
     start_time: apt.start_time,
     end_time: apt.end_time,
     location: apt.location || '',

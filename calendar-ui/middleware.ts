@@ -2,23 +2,38 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
-  // Skip auth check for login page and API routes
-  if (
-    request.nextUrl.pathname === '/login' ||
-    request.nextUrl.pathname.startsWith('/api/')
-  ) {
+  try {
+    // Skip auth check for login page and API routes
+    if (
+      request.nextUrl.pathname === '/login' ||
+      request.nextUrl.pathname.startsWith('/api/')
+    ) {
+      return NextResponse.next()
+    }
+
+    // Check for auth cookie
+    const authCookie = request.cookies.get('lifesynced_auth')
+
+    // If not authenticated, redirect to login
+    if (authCookie?.value !== 'authenticated') {
+      const loginUrl = new URL('/login', request.url)
+      // Preserve the original path as a query parameter for redirect after login
+      loginUrl.searchParams.set('redirect', request.nextUrl.pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+
     return NextResponse.next()
+  } catch (error) {
+    // Log error but don't expose details to client
+    console.error('Middleware error:', error)
+    // Fallback: redirect to login on error
+    try {
+      return NextResponse.redirect(new URL('/login', request.url))
+    } catch {
+      // If redirect fails, return 500 response
+      return new NextResponse('Internal Server Error', { status: 500 })
+    }
   }
-
-  // Check for auth cookie
-  const authCookie = request.cookies.get('lifesynced_auth')
-
-  // If not authenticated, redirect to login
-  if (authCookie?.value !== 'authenticated') {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  return NextResponse.next()
 }
 
 export const config = {
