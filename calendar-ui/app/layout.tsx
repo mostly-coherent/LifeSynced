@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { SessionGuard } from '@/components/SessionGuard'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -9,8 +10,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
 }
 
 export default function RootLayout({
@@ -20,7 +20,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="overscroll-none">{children}</body>
+      <body className="overscroll-none">
+        <SessionGuard />
+        {children}
+      </body>
     </html>
   )
 }

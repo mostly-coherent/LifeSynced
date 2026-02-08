@@ -22,7 +22,16 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl)
     }
 
-    return NextResponse.next()
+    // Rolling cookie refresh — extend 2-day expiry on every request
+    const response = NextResponse.next()
+    response.cookies.set('lifesynced_auth', 'authenticated', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 2, // 2 days
+      path: '/',
+    })
+    return response
   } catch (error) {
     // Log error but don't expose details to client
     console.error('Middleware error:', error)
