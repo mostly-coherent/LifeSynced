@@ -13,7 +13,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+# Single env file at repo root (LifeSynced/.env.local)
+_env_path = Path(__file__).resolve().parent / ".env.local"
+load_dotenv(dotenv_path=_env_path)
 DB_PATH = os.getenv('DB_PATH', 'calendar.db')
 
 

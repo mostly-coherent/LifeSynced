@@ -17,12 +17,13 @@
 cd calendar-ui
 npm install
 
-# 2. Configure environment
-cp env.example .env.local
+# 2. Configure environment (single file at repo root)
+cd ..
+cp .env.example .env.local
 # Edit .env.local with Supabase, Outlook, and iCloud ICS URLs
 
 # 3. Run
-npm run dev
+cd calendar-ui && npm run dev
 ```
 
 **→ Open http://localhost:3002**
@@ -53,14 +54,14 @@ Microsoft Outlook doesn't support adding Apple iCloud calendars—only Outlook.c
 <details>
 <summary><strong>⚙️ Environment Variables</strong></summary>
 
-Create `calendar-ui/.env.local`:
+**Single file:** `LifeSynced/.env.local` (used by both Python sync scripts and the Next.js app)
 
 | Variable | Description |
 |----------|-------------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
 | `OUTLOOK_ICS_URL` | Outlook calendar ICS feed URL |
-| `APPLE_CALENDAR_ICS_URL_1` | iCloud calendar ICS URL |
+| `APPLE_CALENDAR_ICS_URL` or `_1`, `_2`… | iCloud calendar ICS URL(s) |
 | `APP_PASSWORD` | App authentication password |
 | `PERSONAL_REVEAL_PASSWORD` | Password to reveal personal event names |
 

@@ -24,14 +24,17 @@ from dotenv import load_dotenv
 
 from shared_db import CalendarDatabase
 from timezone_utils import get_date_range, normalize_to_utc, parse_iso_datetime, normalize_to_pacific
+from pathlib import Path
+
+# Single env file at repo root (LifeSynced/.env.local)
+_env_path = Path(__file__).resolve().parent / ".env.local"
+load_dotenv(dotenv_path=_env_path)
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-load_dotenv()
 
 APPLE_CALENDAR_ICS_URL = os.getenv('APPLE_CALENDAR_ICS_URL')
 APPLE_CALENDAR_ICS_PATH = os.getenv('APPLE_CALENDAR_ICS_PATH')
@@ -428,7 +431,7 @@ class AppleCalendarSync:
                 calendars.extend(self._load_from_database(APPLE_CALENDAR_DB_PATH))
             
             if not calendars:
-                logger.warning("No calendars configured. Set APPLE_CALENDAR_ICS_URL or APPLE_CALENDAR_ICS_PATH in .env")
+                logger.warning("No calendars configured. Set APPLE_CALENDAR_ICS_URL or APPLE_CALENDAR_ICS_PATH in .env.local")
                 return
             
             appointments = []

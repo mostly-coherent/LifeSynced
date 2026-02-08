@@ -19,13 +19,15 @@ from dotenv import load_dotenv
 from shared_db import CalendarDatabase
 from timezone_utils import normalize_to_utc
 
+# Single env file at repo root (LifeSynced/.env.local)
+_env_path = Path(__file__).resolve().parent / ".env.local"
+load_dotenv(dotenv_path=_env_path)
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-load_dotenv()
 
 CLIENT_ID = os.getenv('CLIENT_ID')
 TENANT_ID = os.getenv('TENANT_ID')
@@ -215,7 +217,7 @@ class CalendarSync:
 
 if __name__ == '__main__':
     if not CLIENT_ID or not TENANT_ID:
-        logger.error("CLIENT_ID and TENANT_ID must be set in .env file")
+        logger.error("CLIENT_ID and TENANT_ID must be set in .env.local")
         exit(1)
     
     sync = CalendarSync()

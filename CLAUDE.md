@@ -62,9 +62,9 @@ LifeSynced/
 │   │   └── schema.sql                # Database schema (run in Supabase)
 │   ├── types/
 │   │   └── ical.js.d.ts              # TypeScript types for ical.js
-│   ├── vercel.json                   # Vercel config + cron job
-│   ├── .env.local                    # Local environment (gitignored)
-│   └── env.example                   # Environment template
+│   └── vercel.json                   # Vercel config + cron job
+├── .env.local                        # Single env file (gitignored) — Python + Next.js
+├── .env.example                      # Environment template (copy to .env.local)
 ├── sync_calendar.py                  # Legacy: Outlook Graph API sync
 ├── sync_calendar_ics.py              # Legacy: Outlook ICS sync
 ├── sync_apple_calendar.py            # Legacy: iCloud sync
@@ -75,7 +75,9 @@ LifeSynced/
 
 ## Environment Variables
 
-### Required (calendar-ui/.env.local)
+**Single file:** `LifeSynced/.env.local` (used by both Python scripts and calendar-ui Next.js app)
+
+### Required
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
@@ -86,7 +88,7 @@ APP_PASSWORD=your-app-password
 PERSONAL_REVEAL_PASSWORD=your-reveal-password  # Optional: masks personal events for demos
 ```
 
-### Optional (legacy Python scripts)
+### Optional (Python sync scripts)
 ```bash
 CLIENT_ID=azure-app-client-id
 TENANT_ID=azure-tenant-id

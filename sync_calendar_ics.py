@@ -20,14 +20,17 @@ from dotenv import load_dotenv
 
 from shared_db import CalendarDatabase
 from timezone_utils import get_date_range, normalize_to_utc, parse_iso_datetime
+from pathlib import Path
+
+# Single env file at repo root (LifeSynced/.env.local)
+_env_path = Path(__file__).resolve().parent / ".env.local"
+load_dotenv(dotenv_path=_env_path)
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-load_dotenv()
 
 OUTLOOK_ICS_URL = os.getenv('OUTLOOK_ICS_URL')
 DB_PATH = os.getenv('DB_PATH', 'calendar.db')
@@ -418,7 +421,7 @@ class CalendarSyncICS:
 
 if __name__ == '__main__':
     if not OUTLOOK_ICS_URL:
-        logger.error("OUTLOOK_ICS_URL must be set in .env file")
+        logger.error("OUTLOOK_ICS_URL must be set in .env.local")
         exit(1)
     
     sync = CalendarSyncICS()

@@ -7,6 +7,7 @@ Master script to sync all configured calendars (Outlook Graph API, Outlook ICS, 
 
 import os
 import logging
+from pathlib import Path
 from dotenv import load_dotenv
 
 # Import sync classes
@@ -14,13 +15,15 @@ from sync_calendar import CalendarSync
 from sync_calendar_ics import CalendarSyncICS
 from sync_apple_calendar import AppleCalendarSync
 
+# Single env file at repo root (LifeSynced/.env.local)
+_env_path = Path(__file__).resolve().parent / ".env.local"
+load_dotenv(dotenv_path=_env_path)
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-load_dotenv()
 
 # Flag to skip Graph API sync (useful when waiting for admin consent)
 SKIP_GRAPH_API = os.getenv('SKIP_GRAPH_API', 'False').lower() == 'true'
